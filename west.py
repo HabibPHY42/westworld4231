@@ -1,12 +1,9 @@
 """
-RED WEST 3D: DENSE FOREST & POPULATED TOWN EDITION (Panda3D)
+RED WEST 3D: ASSET FILTERED EDITION (Panda3D)
 
-Fixes & Features:
-- Sky Fix: Robust GLB/Procedural sky rendering with depth-write disabled and two-sided faces.
-- City Outskirts Forest: 150+ trees framing the town perimeter.
-- Dense Mountain Forest: 350+ trees forming thick pine/oak belts along the mountains.
-- High NPC Population: 45 Town Civilians + 30 Hostile Bandits.
-- Spatial Quad-Batching: Maintained 60+ FPS using flattened rendering nodes.
+Modifications:
+- Removed 'tree1' asset loading (range 2..6 now used).
+- Retained removal of 'bandit4', 'npc8', and 'mountain3'.
 """
 
 import sys
@@ -182,9 +179,9 @@ class RedWest3D(ShowBase):
             container.detachNode()
             self.templates["grass"] = container
 
-        # 2. Trees
+        # 2. Trees (Tree 1 Excluded)
         self.valid_trees = []
-        for i in range(1, 7):
+        for i in range(2, 7):
             path = f"assets/tree{i}.glb"
             try:
                 template = self.load_and_prep_model(path, (0.15, 0.4, 0.15, 1), 12.0)
@@ -203,11 +200,10 @@ class RedWest3D(ShowBase):
             self.templates["fallback_tree"] = container
             self.valid_trees.append("fallback_tree")
 
-        # 3. Mountains (Mountain 1 & Mountain 3 Included)
+        # 3. Mountains (Mountain 3 Excluded)
         self.valid_mountains = []
         mountain_files = [
             ("mountain1", "assets/mountain1.glb"),
-            ("mountain3", "assets/mountain3.glb"),
             ("mountain", "assets/mountain.glb")
         ]
 
@@ -230,22 +226,21 @@ class RedWest3D(ShowBase):
             except Exception:
                 pass
 
-        # 5. Bandits
-        for i in range(1, 6):
+        # 5. Bandits (Bandit 4 Excluded)
+        for i in [1, 2, 3, 5]:
             try:
                 self.templates[f"bandit{i}"] = self.load_and_prep_model(f"assets/bandit{i}.glb", (0.8, 0.1, 0.1, 1), 2.4)
             except Exception:
                 pass
 
-        # 6. Civilian NPCs
-        for i in range(1, 9):
+        # 6. Civilian NPCs (NPC 8 Excluded)
+        for i in range(1, 8):
             try:
                 self.templates[f"npc{i}"] = self.load_and_prep_model(f"assets/npc{i}.glb", (0.2, 0.55, 0.3, 1), 2.2)
             except Exception:
                 pass
 
     def setup_sky(self):
-        """Fixed sky implementation with automatic fallback box."""
         self.sky = self.render.attachNewNode("sky_root")
         sky_loaded = False
 
@@ -260,7 +255,6 @@ class RedWest3D(ShowBase):
             sky_loaded = False
 
         if not sky_loaded:
-            # Fallback procedural sky dome box
             sky_box = self.loader.loadModel("box")
             sky_box.setScale(2000, 2000, 1000)
             sky_box.setPos(-1000, -1000, -250)
@@ -268,7 +262,6 @@ class RedWest3D(ShowBase):
             sky_box.setTwoSided(True)
             sky_box.reparentTo(self.sky)
 
-        # Essential flags to ensure sky renders consistently behind scene
         self.sky.setLightOff(1)
         self.sky.setBin("background", 0)
         self.sky.setDepthWrite(False)
@@ -355,15 +348,15 @@ class RedWest3D(ShowBase):
 
         houses_root.flattenMedium()
 
-        # DENSE FORESTS: 1. City Outskirts Trees + 2. Mountain Belt Trees
+        # Forests
         forest_root = self.render.attachNewNode("forest_root")
 
-        # 1. City Outskirts Trees (Dense tree borders behind and around houses)
+        # City Outskirts Trees
         city_trees_spawned = 0
         while city_trees_spawned < 150:
             cx = random.uniform(-210, 210)
             cy = random.choice([random.uniform(50, 110), random.uniform(-90, -30)])
-            if abs(cy - 120) < 20:  # avoid river
+            if abs(cy - 120) < 20:
                 continue
 
             t = self.templates[random.choice(self.valid_trees)].copyTo(forest_root)
@@ -372,7 +365,7 @@ class RedWest3D(ShowBase):
             t.setH(random.uniform(0, 360))
             city_trees_spawned += 1
 
-        # 2. Mountain Forest Belt (Heavy forest near outer mountains)
+        # Mountain Forest Belt
         mountain_trees_spawned = 0
         while mountain_trees_spawned < 350:
             angle = random.uniform(0, 2 * math.pi)
@@ -380,7 +373,7 @@ class RedWest3D(ShowBase):
             tx = dist * math.cos(angle)
             ty = dist * math.sin(angle)
 
-            if abs(ty - 120) < 25:  # avoid river
+            if abs(ty - 120) < 25:
                 continue
 
             t = self.templates[random.choice(self.valid_trees)].copyTo(forest_root)
@@ -391,7 +384,7 @@ class RedWest3D(ShowBase):
 
         forest_root.flattenMedium()
 
-        # HIGH NPC DENSITY: Civilians (45)
+        # Civilian NPCs
         valid_npc_keys = [k for k in self.templates if k.startswith("npc")]
         self.civilians = []
         if valid_npc_keys:
@@ -403,7 +396,7 @@ class RedWest3D(ShowBase):
                 npc.setH(random.uniform(0, 360))
                 self.civilians.append(npc)
 
-        # HIGH NPC DENSITY: Hostile Bandits (30)
+        # Hostile Bandits
         valid_bandit_keys = [k for k in self.templates if k.startswith("bandit")]
         self.bandits = []
         if valid_bandit_keys:
